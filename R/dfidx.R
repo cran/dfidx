@@ -245,8 +245,14 @@ dfidx <- function(data, idx = NULL, drop.index = TRUE, as.factor = NULL, pkg = N
         alt.name <- idnames[2]
         if (! is.null(varying)){
             varying <- eval_arg(varying)
+            totibble <- FALSE
+            if (inherits(data, "tbl")){
+                data <- as.data.frame(data)
+                totibble <- TRUE
+            }
             data <- reshape(data, varying = varying, direction = "long", sep = sep,
                             timevar = alt.name, idvar = chid.name, ids = chid.var, ...)
+            if (totibble) data <- as_tibble(data)
         }
         else{
             id.names <- as.numeric(rownames(data))
@@ -1157,8 +1163,11 @@ model.matrix.dfidx <- function(object, ..., lhs = NULL, rhs = 1, dot = "separate
 #' identical(TM, TM3)
 unfold_idx <- function(x){
     .idx <- idx(x)
+#    print(x)
     .terms <- attr(x, "terms")
-    x <- x[, - match("idx", names(x))]
+    # Liming Wang 26 oct 2020, bug for intercept only models
+    #    x <- x[, - match("idx", names(x))]
+    x <- x[, setdiff(names(x), c('idx')), drop = FALSE]
     K <- length(x)
     x <- cbind(x, .idx)
     structure(x, ids = data.frame(names = names(x)[(K + 1):(K + length(.idx))],

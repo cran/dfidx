@@ -62,7 +62,7 @@ extract}
 \value{
 \code{as.data.frame} and \code{mean} return a \code{data.frame}, \code{[[} and
 \code{$} a vector, \code{[} either a \code{dfidx} or a vector, \verb{$<-}
-and \verb{[[<-} modify the values of an existing coumn or create a
+and \verb{[[<-} modify the values of an existing column or create a
 new column of a \code{dfidx} object, \code{print} is called for its side
 effect
 }
