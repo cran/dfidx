@@ -1,3 +1,13 @@
+# dfidx 0.0-6
+
+* new named vectors interface for defining the indexes
+
+* enhanced print method for tibbles
+
+* a new quarto vignette
+
+* AER, mlogit and plm are no longer suggested packages
+
 # dfidx 0.0-5
 
 * test of the presence of suggested packages are added in the man

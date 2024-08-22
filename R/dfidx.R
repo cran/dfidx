@@ -26,79 +26,78 @@
 #' @param opposite return the opposite of the series
 #' @param levels the levels for the second index
 #' @param ranked a boolean for ranked data
+#' @param name name of the `idx` column
+#' @param position position of the `idx` column
 #' @param ... further arguments
 #' @details Indexes are stored as a `data.frame` column in the
 #'     resulting `dfidx` object
 #' @return an object of class `"dfidx"`
 #' @export
 #' @importFrom stats reshape as.formula formula terms update relevel
+#' @importFrom dplyr relocate
+#' @importFrom tidyselect any_of
 #' @author Yves Croissant
 #' @examples
-#' if (requireNamespace("AER")){
-#' data("TravelMode", package = "AER")
-#'
 #' # the first two columns contain the index
-#'
-#' TM1 <- dfidx(TravelMode)
+#' mn <- dfidx(munnell)
 #'
 #' # explicitely indicate the two indexes using either a vector or a
 #' # list of two characters
-#' 
-#' TM2 <- dfidx(TravelMode, idx = c("individual", "mode"))
-#'
-#' TM3 <- dfidx(TravelMode, idx = list("individual", "mode"))
+#' mn <- dfidx(munnell, idx = c("state", "year"))
+#' mn <- dfidx(munnell, idx = list("state", "year"))
 #'
 #' # rename one or both indexes
-#'
-#' TM3b <- dfidx(TravelMode, idnames = c(NA, "trmode"))
+#' mn <- dfidx(munnell, idnames = c(NA, "period"))
 #'
 #' # for balanced data (with observations ordered by the first, then
 #' # by the second index
 #'
 #' # use the name of the first index
-#'
-#' TM4 <- dfidx(TravelMode, idx = "individual", idnames = c("individual", "mode"))
+#' mn <- dfidx(munnell, idx = "state", idnames = c("state", "year"))
 #'
 #' # or an integer equal to the cardinal of the first index
-#'
-#' TM5 <- dfidx(TravelMode, idx = 210, idnames = c("individual", "mode"))
+#' mn <- dfidx(munnell, idx = 48, idnames = c("state", "year"))
 #'
 #' # Indicate the values of the second index using the levels argument
-#'
-#' TM5b <- dfidx(TravelMode, idx = 210, idnames = c("individual", "mode"),
-#' levels = c("air", "train", "bus", "car"))
-#' }
+#' mn <- dfidx(munnell, idx = 48, idnames = c("state", "year"),
+#'             levels = 1970:1986)
 #' 
 #' # Nesting structure for one of the index
-#' if (requireNamespace("mlogit")){
-#' data("JapaneseFDI", package = "mlogit")
-#' JapaneseFDI <- dplyr::select(JapaneseFDI, 1:8)
-#' JP1b <- dfidx(JapaneseFDI, idx = list("firm", c("region", "country")),
-#' idnames = c("japf", "iso80"))
-#' }
+#' mn <- dfidx(munnell, idx = c(region = "state", president = "year"))
+#' 
 #' # Data in wide format
-#' if (requireNamespace("mlogit")){
-#' data("Fishing", package = "mlogit")
-#' Fi <- dfidx(Fishing, shape = "wide", varying = 2:9, idnames = c("chid", "alt"))
-#' }
+#' mn <- dfidx(munnell_wide, idx = c(region = "state"),
+#'             varying = 3:36, sep = "_", idnames = c(NA, "year"))
+#'
+#' # Customize the name and the position of the `idx` column
+#' #dfidx(munnell, position = 3, name = "index")
 dfidx <- function(data, idx = NULL, drop.index = TRUE, as.factor = NULL, pkg = NULL,
                   fancy.row.names = FALSE, subset = NULL,
                   idnames = NULL, shape = c("long", "wide"), choice = NULL,
-                  varying = NULL, sep = ".", opposite = NULL, levels = NULL, ranked = FALSE, ...){
+                  varying = NULL, sep = ".", opposite = NULL, levels = NULL, ranked = FALSE,
+                  name, position, ...){
                   # the default class of the resulting data.frame is dfidx
                   # if (is.null(clsgdata)) clsgdata <- "dfidx"
                   # if clseries is not NA, it is xseries if clseries is NULL or
                   # c(clseries, "xseries") otherwise ; if clseries is NA, it is set
                   # to NULL
+    if (! is.list(idx) & ! is.null(names(idx))){
+        idx <- lapply(1:length(idx), function(i){
+            nms_i <- names(idx)[i]
+            if (nchar(nms_i) == 0) idx[[i]]
+            else c(idx[[i]], names(idx)[i])
+        })
+    }
     
+    .as.factor <- as.factor
     shape <- match.arg(shape)
     if (! is.null(varying)) shape <- "wide"
 
     cldata <- match.call(expand.dots = TRUE)
+
     # Idea borrowed from plm: if no index are provided and the data
     # set is in long format, they are the first two columns of the
     # data.frame
-
     if (is.null(idx) & shape == "long") idx <- names(data)[1:2]
 
     # dfidx can be called with element-list arguments from mlogit or
@@ -127,9 +126,9 @@ dfidx <- function(data, idx = NULL, drop.index = TRUE, as.factor = NULL, pkg = N
     # 1. Some pathological cases
     # ------------------------------------
 
-    # a/ idx is NULL and the levels argument is set It supposes that
-    # we have a balanced data and we fill the idx argument with the
-    # cardinal of the first index
+    # a/ idx is NULL and the levels argument is set, it is assumed
+    # that we have a balanced data and we fill the idx argument with
+    # the cardinal of the first index
     
     if (shape == "long" & is.null(idx) & ! is.null(levels)){
         L <- length(levels)
@@ -346,18 +345,18 @@ dfidx <- function(data, idx = NULL, drop.index = TRUE, as.factor = NULL, pkg = N
     # 5/ Set the class of the indexes
     # -------------------------------
     # coerce or not index to factors
-    if (is.null(as.factor)) as.factor <- c(FALSE, TRUE)
-    if (! is.logical(as.factor)) stop("the as.factor argument should be logical")
+    if (is.null(.as.factor)) .as.factor <- c(FALSE, TRUE)
+    if (! is.logical(.as.factor)) stop("the as.factor argument should be logical")
     else{
-        if (! length(as.factor) %in% 1:2) stop("the length of the as.factor argument should be 1 or 2")
-        if (length(as.factor) == 1) as.factor <- rep(as.factor, 2)
+        if (! length(.as.factor) %in% 1:2) stop("the length of the as.factor argument should be 1 or 2")
+        if (length(.as.factor) == 1) .as.factor <- rep(.as.factor, 2)
     }
     # coerce the indexes as factors if necessary
     is.wholenumber <- function(x, tol = .Machine$double.eps ^ 0.5)  abs(x - round(x)) < tol
     data[posid1] <- lapply(data[posid1],
                            function(z){
-                               if (as.factor[1]   & ! is.factor(z)) z <- as.factor(z)
-                               if (! as.factor[1] &   is.factor(z)){
+                               if (.as.factor[1] & ! is.factor(z)) z <- as.factor(z)  # as.factor[1]
+                               if (! .as.factor[1] &  is.factor(z)){
                                    z <- as.character(z)
                                    znum <- as.numeric(z)
                                    if (! any(is.na(znum))){
@@ -368,18 +367,20 @@ dfidx <- function(data, idx = NULL, drop.index = TRUE, as.factor = NULL, pkg = N
                                }
                                z
                            })
+
     if (! is.null(posid2)){
         data[posid2] <- lapply(data[posid2],
                                function(z){
-                                   if (as.factor[2]   & ! is.factor(z)){
+                                   if (.as.factor[2]   & ! is.factor(z)){
                                        if (is.null(levels)) z <- factor(z)
                                        else z <- factor(z, levels = levels)
                                    }
-                                   if (! as.factor[2] & is.factor(z)) z <- as.character(z)
+                                   if (! .as.factor[2] & is.factor(z)) z <- as.character(z)
                                    z
                                })
     }
 
+    # -------------------------------
     # 6/ Sort the data.frame
     # -------------------------------
     posids <- c(rev(posid1), rev(posid2))
@@ -401,7 +402,7 @@ dfidx <- function(data, idx = NULL, drop.index = TRUE, as.factor = NULL, pkg = N
             data[[idnames[[2]]]] <- rep(levels, length(uniqueid))
         }
         else data[[idnames[2]]] <- Reduce("c", sapply(Tis, seq_len))
-        if (as.factor[2]){
+        if (.as.factor[2]){
             if (is.null(levels)) data[[idnames[2]]] <- factor(data[[idnames[2]]])
             else data[[idnames[2]]] <- factor(data[[idnames[2]]], levels = levels)
         }
@@ -461,9 +462,8 @@ dfidx <- function(data, idx = NULL, drop.index = TRUE, as.factor = NULL, pkg = N
         if (ncol(data) == 0L) warning(paste("after dropping of index variables, ",
                                             "the dfidx contains 0 columns"))
     }
-
     if (fancy.row.names) rownames(data) <- paste(idx[[posids[1]]], idx[[posids[2]]], sep = "-")
-
+    
     # --------------------------
     # 10/ Take the opposite of the required series
     # --------------------------
@@ -478,11 +478,20 @@ dfidx <- function(data, idx = NULL, drop.index = TRUE, as.factor = NULL, pkg = N
 
     if (! is.null(pkg)) clsgdata <- c(paste("dfidx_", pkg, sep = ""), "dfidx")
     else clsgdata <- "dfidx"
-    class(idx) <- c("idx", "data.frame")
+    class(idx) <- c("idx", class(idx))
     rownames(data) <- rownames(idx) <- NULL
     # drop the unused levels for the second index
     idx[[idx_name(idx, 2)]] <- idx[[idx_name(idx, 2)]][drop = TRUE]
-    data$idx <- idx
+    # set idx name and position
+    if (missing(name)) .name <- "idx" else .name <- name
+    if (missing(position)) .position <- ifelse(inherits(data, "tbl_df"), 1, length(data) + 1) else .position <- position
+    K <- length(data)
+    if (.position > K + 1) stop(cat("position should be <= ", K + 1, "\n"))
+    .before <- seq_len(.position - 1)
+    .after <- .position:K
+#    print(head(data, 3));stop()
+    data[[.name]] <- idx
+    data <- data %>% relocate(any_of(.name), .before = any_of(.position))
     data <- structure(data, class = c(clsgdata, class(data)), clseries = clseries, choice = choice)
     if (ranked) data <- mymlogit2rank(data, choicename = choice)
     data
@@ -512,714 +521,5 @@ mymlogit2rank <- function(x, choicename, ...){
     rownames(result) <- NULL
     dfidx(result, idx = list(c("idx1", id_name), alt_name), pkg = "mlogit")
 }
-
-
-#' Index for dfidx
-#'
-#' The index of a `dfidx` is a dat .frame containing the different
-#' series which define the two indexes (with possibly a nesting
-#' structure). It is stored as a "sticky" data.frame column of the
-#' data.frame and is also inherited by series (of class `'xseries'`)
-#' which are extracted from a `dfidx`.
-#'
-#' @param x a `dfidx` or a `xseries`
-#' @param n,m `n` is the index to be extracted (1 or 2), `m` equal to
-#'     one to get the index, greater than one to get a nesting
-#'     variable.
-#' @param ... further arguments (for now unused)
-#' @param size the number of characters of the indexes for the format
-#'     method
-#' @details idx is defined as a generic with a `dfidx` and a `xseries`
-#'     method.
-#' @return a `data.frame` containing the indexes or a series if a
-#'     specific index is selected
-#' @export
-#' @author Yves Croissant
-#' @rdname idx
-#' @export
-#' @examples
-#' if (requireNamespace("AER")){
-#' data("TravelMode", package = "AER")
-#' TM1 <- dfidx(TravelMode)
-#' idx(TM1)
-#' inc <- TM1$income
-#' idx(inc)
-#' # get the first index
-#' idx(TM1, 1)
-#' # get the second index
-#' idx(TM1, 2)
-#' idx(inc, 2)
-#' }
-idx <- function(x, n = NULL, m = NULL) UseMethod("idx")
-
-#' @rdname idx
-#' @export
-idx.dfidx <- function(x, n = NULL, m = NULL){
-    idxnames <- idx_name(x)
-    x <- as.data.frame(x)
-    .idx <- x[[idxnames]]
-    idx(.idx, n = n, m = m)
-}
-
-#' @rdname idx
-#' @export
-idx.idx <- function(x, n = NULL, m = NULL){
-    if (! is.null(n)){
-        if (is.null(m)) m <- 1
-        .ids <- attr(x, "ids")
-        .idsn <- which(.ids == n)
-        if (length(.idsn) < m) x <- NULL
-        else x <- x[[.idsn[m]]]
-    }
-    x
-}
-
-#' @rdname idx
-#' @export
-idx.xseries <- function(x, n = NULL, m = NULL){
-    .idx <- attr(x, "idx")
-    idx(.idx, n = n, m = m)
-}
-
-
-#' @rdname idx
-#' @export
-format.idx <- function(x, size = 4, ...){
-    ids <- attr(x, "ids")
-    x <- x[, ! duplicated(ids)]
-    paste(substr(as.character(x[[1]]), 1, size),
-          substr(as.character(x[[2]]), nchar(as.character(x[[2]])) - size + 1,
-                 nchar(as.character(x[[2]]))), sep = ":")
-}
-
-#' Get the names of the indexes
-#'
-#' 
-#' This function extract the names of the indexes or the name of a
-#' specific index
-#'
-#' @name idx_name
-#' @param x a `dfidx`, a `idx` or a `xseries` object
-#' @param n the index to be extracted (1 or 2, ignoring the nesting
-#'     variables)
-#' @param m if > 1, a nesting variable
-#' @return if `n` is `NULL`, a named integer which gives the posititon
-#'     of the `idx` column in the `dfidx` object, otherwise, a
-#'     character of length 1
-#' @export
-#' @author Yves Croissant
-#' @examples
-#' if (requireNamespace("mlogit")){
-#' data("JapaneseFDI", package = "mlogit")
-#' JapaneseFDI <- dplyr::select(JapaneseFDI, 1:8)
-#' JP1b <- dfidx(JapaneseFDI, idx = list("firm", c("region", "country")),
-#' idnames = c("japf", "iso80"))
-#' # get the position of the idx column
-#' idx_name(JP1b)
-#' # get the name of the first index
-#' idx_name(JP1b, 1)
-#' # get the name of the second index
-#' idx_name(JP1b, 2)
-#' # get the name of the nesting variable for the second index
-#' idx_name(JP1b, 2, 2)
-#' }
-idx_name <- function(x, n = 1, m = NULL)
-    UseMethod("idx_name")
-
-#' @rdname idx_name
-#' @export
-idx_name.dfidx <- function(x, n = NULL, m = NULL){
-    idxcols <- sapply(x, function(i) "idx" %in% class(i))
-    if (sum(idxcols) > 1) stop("More than one idx column")
-    if (is.null(n)) which(idxcols)
-    else idx_name(idx(x), n = n, m = m)
-}
-
-#' @rdname idx_name
-#' @export
-idx_name.idx <- function(x, n = NULL, m = NULL){
-    if (is.null(n)) x <- NULL
-    else{
-        .ids <- attr(x, "ids")
-        if (is.null(m)) m <- 1
-        .idsn <- which(.ids == n)
-        if (length(.idsn) < m) x <- NULL
-        else x <- names(x)[[.idsn[m]]]
-    }
-    x
-}
-
-#' @rdname idx_name
-#' @export
-idx_name.xseries <- function(x, n = NULL, m = NULL){
-    .idx <- idx(x)
-    idx_name(.idx, n = n, m = m)
-}
-
-#' Methods for dfidx
-#'
-#' A `dfidx` is a `data.frame` with a "sticky" data.frame column
-#' which contains the indexes. Specific methods of functions that
-#' extract lines and/or columns of a `data.frame` are provided.
-#'
-#' @name methods.dfidx
-#' @param x,object a `dfidx` object
-#' @param i the row index
-#' @param j the column index
-#' @param drop if `TRUE` a vector is returned if the result is a one
-#'     column `data.frame`
-#' @param y the name or the position of the series one wishes to
-#'     extract
-#' @param value the value for the replacement method
-#' @param row.names,optional arguments of the generic `as.data.frame`
-#'     method, not used
-#' @param n the number of rows for the print method
-#' @param ... further arguments
-#' @export
-#' @author Yves Croissant
-#' @return `as.data.frame` and `mean` return a `data.frame`, `[[` and
-#'     `$` a vector, `[` either a `dfidx` or a vector, `$<-`
-#'     and `[[<-` modify the values of an existing column or create a
-#'     new column of a `dfidx` object, `print` is called for its side
-#'     effect
-#' @examples
-#' if (requireNamespace("AER")){
-#' data("TravelMode", package = "AER")
-#' TM <- dfidx(TravelMode)
-#' # extract a series (returns as a xseries object)
-#' TM$wait
-#' # or
-#' TM[["wait"]]
-#' # extract a subset of series (returns as a dfidx object)
-#' TM[c("wait", "income")]
-#' # extract a subset of rows and columns
-#' TM[TM$income > 30, c("wait", "income")]
-#' # dfidx, idx and xseries have print methods as (like tibbles), a n
-#' # argument
-#' print(TM, n = 3)
-#' print(idx(TM), n = 3)
-#' print(TM$income, n = 3)
-#' # a dfidx object can be coerced to a data.frame
-#' head(as.data.frame(TM))
-#' }
-"[.dfidx" <- function(x, i, j, drop = TRUE){
-    idx.pos <- idx_name(x)
-    # add the idx column to the return data.frame if :
-    # - j > 1
-    # - j == 1 & drop = FALSE
-#    if (! missing(j) && (length(j) > 1 | ! drop))
-    if (! missing(j) && (! is.logical(j)) && (length(j) > 1 | ! drop))
-        j <- union(j, ifelse(is.numeric(j), as.numeric(idx.pos), names(idx.pos)))
-    class <- class(x)
-    clseries <- attr(x, "clseries")
-    idx <- idx(x)
-    mdrop <- missing(drop)
-    Narg <- nargs() - ! mdrop
-
-    # use the data.frame method for the dfidx
-    if (Narg < 3L){
-        if (any(i < 0) & any(i >0)) stop("negative and positive indexes can't be mixed")
-        if (any(i < 0)){
-            i <- seq_len(length(x))[i]
-        }
-        i <- union(i, ifelse(is.numeric(i), as.numeric(idx.pos), names(idx.pos)))
-        mydata <- `[.data.frame`(x, i)
-    }
-    else{
-        mydata <- as.data.frame(x)[i, j, drop = drop]
-    }
-    # coerse the result to a clseries if it is a series or to a
-    # dfidx
-    if (is.null(dim(mydata))){
-        structure(mydata,
-                  idx = idx,
-                  class = c(clseries, class(mydata))
-                  )
-    }
-    else{
-        structure(mydata,
-                  idx = idx,
-                  class = class)
-    }
-}
-
-#' @rdname methods.dfidx
-#' @export
-as.data.frame.dfidx <- function(x, row.names = NULL, optional = FALSE, ...){
-    dfidx_class <- sapply(strsplit(class(x), "_"),
-                          function(z) z[1]) %in% "dfidx"
-    class(x) <- class(x)[! dfidx_class]
-    attr(x, "row.names") <- 1:nrow(x)
-    attr(x, "clseries") <- NULL
-    x
-}
-    
-#' @rdname methods.dfidx
-#' @export
-print.dfidx <- function(x, ..., n = 10L){
-    idx <- idx(x)
-    x <- as.data.frame(x)
-    if (! inherits(x, "tbl_df")){
-        if (n < nrow(x))
-            cat(paste("~~~~~~~\n", "first", n, "observations out of", nrow(x), "\n~~~~~~~\n"))
-        stopifnot(length(n) == 1L)
-        n <- if (n < 0L) 
-                 max(nrow(x) + n, 0L)
-             else min(n, nrow(x))
-        x <- x[seq_len(n), , drop = FALSE]
-        print(x, ...)
-    }
-    else print(x, ..., n = n)
-    cat("\n")
-    print(idx, ..., n = n)
-}
-
-#' @rdname methods.dfidx
-#' @importFrom utils head
-#' @export
-head.dfidx <- function(x, n = 10L, ...) print(x, n = min(nrow(x), n), ...)
-
-#' @rdname methods.dfidx
-#' @export
-"[[.dfidx" <- function(x, y){
-    clseries <- attr(x, "clseries")
-    .idx <- idx(x)
-    class(x) <- "data.frame"
-    if (y %in% names(x)){
-        series <- x[[y]]
-        if (! "idx" %in% class(series))
-            series <- structure(series, idx = .idx, class = c(clseries, class(series)))
-    }
-    else series <- NULL
-    series
-}  
-
-"[[.dfidx" <- function(x, y){
-    clseries <- attr(x, "clseries")
-    .idx <- idx(x)
-    class(x) <- "data.frame"
-    if (is.character(y)){
-        if ((y %in% names(x)) | (y %in% names(.idx))){
-            if (y %in% names(x)) series <- x[[y]] else series <- .idx[[y]]
-        }
-        else series <- NULL
-    }
-    else series <- x[[y]]
-    if (! is.null(series))
-        if (! "idx" %in% class(series))
-            series <- structure(series, idx = .idx, class = c(clseries, class(series)))
-    series
-}
-
-#' @rdname methods.dfidx
-#' @export
-"$.dfidx" <- function(x,y){
-  "[["(x, paste(as.name(y)))
-}
-
-#' @rdname methods.dfidx
-#' @export
-"$<-.dfidx" <- function(object, y, value){
-  # object : le data.frame
-  # y : la variable
-  # value : la nouvelle valeur
-  object[[y]] <- value
-  object
-}
-
-#' @rdname methods.dfidx
-#' @export
-"[[<-.dfidx" <- function(object, y, value){
-  if (class(value)[1] == "xseries"){
-    class(value) <- class(value)[-1]
-    attr(value, "idx") <- NULL
-  }
-  object <- "[[<-.data.frame"(object, y, value = value)
-  object
-}
-
-#' @rdname methods.dfidx
-#' @export
-print.xseries <- function(x, ..., n = 10L){
-    posxseries <- match("xseries", class(x))
-    class(x) <- class(x)[-(1:posxseries)]
-    idx <- attr(x, "idx")
-    attr(x, "idx") <- NULL
-    print(x[seq_len(min(length(x), n))])
-    print(idx, n = n)
-}
-
-
-#' @rdname methods.dfidx
-#' @export
-print.idx <- function(x, ..., n = 10L){
-    ids <- paste(attr(x, "ids"))
-    cat("~~~ indexes ~~~~\n")
-    print(as.data.frame(x)[seq_len(min(nrow(x), n)), ])
-    cat("indexes: ", paste(ids, collapse = ", "), "\n")
-}    
-
-#' @rdname methods.dfidx
-#' @method mean dfidx
-#' @export
-mean.dfidx <- function(x, ...){
-    alt <- idx(x)[[idx_name(x, 2)]]
-    x <- x[, - idx_name(x)]
-    result <- data.frame(lapply(x,
-                                function(x){
-                                    if (is.numeric(x)) result <- as.numeric(tapply(x, alt, mean))
-                                    else{
-                                        if (is.logical(x)){
-                                            z <- tapply(x, alt, sum)
-                                            result <- z == max(z)
-                                        }
-                                        if(is.character(x)) x <- factor(x, levels = unique(x))
-                                        if (is.factor(x)) result <- factor(names(which.max(table(x))), levels = levels(x))
-                                    }
-                                    result
-                                }
-                                )
-                         )
-    result
-}
-
-#' Methods for dplyr verbs
-#'
-#' methods of `dplyr` verbs for `dfidx` objects.  Default functions
-#' don't work because most of these functions returns either a
-#' `tibble` or a `data.frame` but not a `dfidx`
-#' @name dplyr
-#' @param .data a dfidx object,
-#' @param ... further arguments
-#' @return an object of class `"dfidx"`
-#' @author Yves Croissant
-#' @details These methods always return the data frame column that
-#'     contains the indexes and return a `dfidx` object.
-#' @examples
-#' if (requireNamespace("AER")){
-#' data("TravelMode", package = "AER")
-#' TM <- dfidx(TravelMode)
-#' select(TM, - wait, - vcost)
-#' mutate(TM, inc2  = income ^ 2, linc = log(income))
-#' transmute(TM, inc2  = income ^ 2, linc = log(income))
-#' arrange(TM, desc(size), income)
-#' filter(TM, income > 35, size <= 2)
-#' pull(TM, income)
-#' slice(TM, c(1:2, 5:7))
-#' }
-NULL
-
-#' @importFrom dplyr as_tibble
-#' @export
-dplyr::as_tibble
-
-
-#' @importFrom dplyr %>%
-#' @export
-dplyr::`%>%`
-
-#' @importFrom dplyr filter
-#' @export
-dplyr::filter
-
-#' @importFrom dplyr arrange
-#' @export
-dplyr::arrange
-
-#' @importFrom dplyr slice
-#' @export
-dplyr::slice
-
-#' @importFrom dplyr pull
-#' @export
-dplyr::pull
-
-#' @importFrom dplyr mutate
-#' @export
-dplyr::mutate
-
-#' @importFrom dplyr transmute
-#' @export
-dplyr::transmute
-
-#' @importFrom dplyr select
-#' @export
-dplyr::select
-
-#' @rdname dplyr
-#' @importFrom dplyr arrange
-#' @export
-arrange.dfidx <- function(.data, ...){
-    attrs <- attributes(.data)
-    .data <- as.data.frame(.data)
-    .data <- arrange(.data, ...)
-    attributes(.data) <- attrs
-    .data
-}
-
-#' @rdname dplyr
-#' @importFrom dplyr filter
-#' @export
-filter.dfidx <- function(.data, ...){
-    attrs <- attributes(.data)
-    .data <- as.data.frame(.data)
-    .data <- filter(.data, ...)
-    attrs$row.names <- 1:nrow(.data)
-    attributes(.data) <- attrs
-    .data
-}
-
-#' @rdname dplyr
-#' @importFrom dplyr slice
-#' @export
-slice.dfidx <- function(.data, ...){
-    attrs <- attributes(.data)
-    .data <- as.data.frame(.data)
-    .data <- slice(.data, ...)
-    attrs$row.names <- 1:nrow(.data)
-    attributes(.data) <- attrs
-    .data
-}
-
-#' @rdname dplyr
-#' @importFrom dplyr mutate
-#' @export
-mutate.dfidx <- function(.data, ...){
-    attrs <- attributes(.data)
-    .data <- as.data.frame(.data)
-    .data <- mutate(.data, ...)
-    attrs$names <- names(.data)
-    attributes(.data) <- attrs
-    .data
-}
-
-#' @rdname dplyr
-#' @importFrom dplyr transmute
-#' @export
-transmute.dfidx <- function(.data, ...){
-    idxpos <- idx_name(.data)
-    idx <- .data[[idxpos]]
-    attrs <- attributes(.data)
-    .data <- as.data.frame(.data)
-    .data <- transmute(.data, ...)
-    .data[[names(idxpos)]] <- idx
-    attrs$names <- names(.data)
-    attributes(.data) <- attrs
-    .data
-}
-
-#' @rdname dplyr
-#' @importFrom dplyr select
-#' @export
-select.dfidx <- function(.data, ...){
-    idxpos <- idx_name(.data)
-    attrs <- attributes(.data)
-    x <- as.data.frame(.data)
-    x <- select(x, ...)
-    # idx should be a sticky column; if not selected, add it to the
-    # resulting data.frame
-    if (! names(idxpos) %in% names(x)){
-        idx <- .data[[idxpos]]
-        x[[names(idxpos)]] <-  idx
-    }
-    attrs$names <- names(x)
-    attributes(x) <- attrs
-    x
-}
-
-#' model.frame/matrix for dfidx objects
-#'
-#' Specific model.frame/matrix are provided for dfidx objects. This
-#' leads to an unusual order of arguments compared to the
-#' usage. Actually, the first two arguments of the model.frame method
-#' are a dfidx and a formula and the only main argument of the
-#' model.matrix is a dfidx which should be the result of a call to the
-#' model.frame method, i.e. it should have a term attribute.
-#' @param formula a `dfidx`
-#' @param data a `formula`
-#' @param ...,lhs,rhs,dot see the `Formula` method
-#' @param alt.subset a subset of levels for the second index
-#' @param reflevel a user-defined first level for the second index
-#' @param balanced a boolean indicating if the resulting data.frame
-#'     has to be balanced or not
-#' @importFrom Formula as.Formula Formula
-#' @importFrom stats model.matrix
-#' @importFrom stats model.frame
-#' @return a `dfidx` object for the `model.frame` method and a matrix
-#'     for the `model.matrix` method.
-#' @export
-#' @author Yves Croissant
-#' @examples
-#' if (requireNamespace("AER")){
-#' data("TravelMode", package = "AER")
-#' TM <- dfidx(TravelMode)
-#' mf <- model.frame(TM, choice ~ vcost | income - 1 | travel)
-#' head(model.matrix(mf, rhs = 1))
-#' head(model.matrix(mf, rhs = 2))
-#' head(model.matrix(mf, rhs = 1:3))
-#' }
-model.frame.dfidx <- function(formula, data = NULL, ...,
-                              lhs = NULL, rhs = NULL, dot = "previous",
-                              alt.subset = NULL, reflevel = NULL,
-                              balanced = FALSE){
-    # get the data and the formula (in this unusual order)
-    .data <- formula
-    # coerce the formula to a Formula object if necessary
-    if(inherits(data, "Formula")) .formula <- data else .formula <- as.Formula(data)
-    # update the formula in order to include the indexes in the last part
-    .oformula <- .formula
-    .formula <- add_idx(.formula, .data)
-    # coerce the data to a data.frame (index series become just
-    # ordinary series) with an ids attribute (a data.frame with the
-    # index series and a digit 1/2 indicating to which index they
-    # refer to)
-    .choice <- attr(.data, "choice")
-    if (class(.data)[1] != "dfidx") .pkg <- strsplit(class(.data)[1], "_")[[1]][2]
-    else .pkg <- NULL
-    .data <- unfold_idx(.data)
-    .ids <- attr(.data, "ids")
-    # use the Formula's model.frame method
-    .data <- model.frame(.formula, .data, ...,
-                         lhs = lhs, rhs = rhs, dot = dot)
-    .nterms <- attr(.data, "terms")
-    # add the previously saved ids attribute
-    attr(.data, "ids") <- .ids
-    attr(.data, "choice") <- .choice
-    # "fold" the index in a data.frame column to get an dfidx object
-    .data <- fold_idx(.data, pkg = .pkg)
-    # select a subset of alternatives if requires, which implies
-    # removing the choice situations for which the chosen alternative
-    # is not in the subset
-    if (! is.null(alt.subset) | balanced){
-        .idx <- idx(.data)
-    }
-    if (! is.null(alt.subset)){
-        choice <- attr(.data, "choice")
-        if (is.null(choice)){
-            #stop("the use of alt.subset requires that a choice variable is defined")
-            choice <- paste(deparse(.formula[[2]]))
-        }
-        .idx <- idx(.data)
-        name_id1 <- idx_name(.data, 1)
-        name_id2 <- idx_name(.data, 2)
-        id1 <- .idx[[name_id1]]
-        id2 <- .idx[[name_id2]]
-        chid_kept <- subset(.idx, .data[[choice]] & id2 %in% alt.subset)[[1]]
-        rows_kept <- (id1 %in% chid_kept) & (id2 %in% alt.subset)
-        .data <- .data[rows_kept, ]
-        .data[[idx_name(.data)]][[idx_name(.data, 2)]] <-
-            .data[[idx_name(.data)]][[idx_name(.data, 2)]][drop = TRUE]
-    }
-    if (balanced){
-        .idx <- idx(.data)
-        name_id1 <- idx_name(.data, 1)
-        name_id2 <- idx_name(.data, 2)
-        id1 <- .idx[[name_id1]]
-        id2 <- .idx[[name_id2]]        
-        un_id1 <- unique(id1)
-        un_id2 <- unique(id2)
-        complete <- expand.grid(un_id2, un_id1, stringsAsFactors = FALSE)[, 2:1]
-        names(complete) <- c(idx_name(.data, 1), idx_name(.data, 2))
-        .ids <- attr(.idx, "ids")
-        complete <- merge(complete, unique(.idx[.ids == 1]), all.x = TRUE)
-        .data <- unfold_idx(.data)
-        .ids <- attr(.data, "ids")
-        .data <- merge(.data, complete, all.y = TRUE)
-#        .data <- .data[order(.data[[name_id1]], .data[[name_id2]]),]
-        attr(.data, "ids") <- .ids
-        .data <- fold_idx(.data, pkg = .pkg)
-    }
-    if (! is.null(reflevel)){
-        .levels <- levels(idx(.data)[[idx_name(.data, 2)]])
-        if (! reflevel %in% .levels) stop("unknown reference level")
-        else .data[[idx_name(.data)]][[idx_name(.data, 2)]] <-
-                 relevel(.data[[idx_name(.data)]][[idx_name(.data, 2)]], reflevel)
-    }
-    else .levels <- NULL
-    
-    attr(.data, "terms") <- .nterms
-    attr(.data, "formula") <- .oformula
-    attr(.data, "alt.ordering") <- .levels
-    .data
-}
-
-#' @rdname model.frame.dfidx
-#' @param object a dfidx object
-#' @export
-model.matrix.dfidx <- function(object, ..., lhs = NULL, rhs = 1, dot = "separate"){
-    if (is.null(attr(object, "formula")))
-        stop("the argument is an ordinary dfidx object")
-    .formula <- attr(object, "formula")
-    model.matrix(.formula, object, lhs = lhs, rhs = rhs, dot = dot)
-}
-
-#' Fold and Unfold a dfidx object
-#'
-#' `fold_idx` takes a dfidx, includes the indexes as stand alone
-#' columns, remove the `idx` column and return a data.frame, with an
-#' `ids` attribute that contains the informations about the
-#' indexes. `fold_idx` performs the opposite operation
-#' @param x a `dfidx` object
-#' @param pkg if not `NULL`, this argument is passed to `dfidx`
-#' @return a `data.frame` for the `unfold_dfidx` function, a `dfidx`
-#'     object for the `fold_dfidx` function
-#' @export
-#' @author Yves Croissant
-#' @examples
-#' if (requireNamespace("AER")){
-#' data("TravelMode", package = "AER")
-#' TM <- dfidx(TravelMode)
-#' TM2 <- unfold_idx(TM)
-#' attr(TM2, "ids")
-#' TM3 <- fold_idx(TM2)
-#' identical(TM, TM3)
-#' }
-unfold_idx <- function(x){
-    .idx <- idx(x)
-#    print(x)
-    .terms <- attr(x, "terms")
-    # Liming Wang 26 oct 2020, bug for intercept only models
-    #    x <- x[, - match("idx", names(x))]
-    x <- x[, setdiff(names(x), c('idx')), drop = FALSE]
-    K <- length(x)
-    x <- cbind(x, .idx)
-    structure(x, ids = data.frame(names = names(x)[(K + 1):(K + length(.idx))],
-                                  ids = attr(.idx, "ids"),
-                                  stringsAsFactors = FALSE),
-              terms = .terms)
-}
-
-#' @rdname unfold_idx
-#' @export
-fold_idx <- function(x, pkg = NULL){
-    .terms <- attr(x, "terms")
-    .choice <- attr(x, "choice")
-    .idx <- vector(mode = "list", length = 2)
-    for (i in 1:2) .idx[[i]] <- attr(x, "ids")[attr(x, "ids")$ids == i, "names"]
-    x <- dfidx(x, .idx, pkg = pkg)
-    attributes(x) <- c(attributes(x), terms = .terms, choice = .choice)
-    x
-}
-
-# update the formula in order to add the names of the index series
-add_idx <- function(formula, data){
-    .idx <- paste(". ~ . + ", paste(names(idx(data)), collapse = " + "))
-    nparts <- length(formula)[2]
-    .idx <- paste(". ~ ", paste(rep(" . | ", nparts), collapse = ""),
-                  paste(names(idx(data)), collapse = " + "))
-    update(formula, as.formula(.idx))
-}
-    
-levels.dfidx <- function(x){
-    x <- x[[idx_name(x)]][[idx_name(x, 2)]]
-    if (is.factor(x)) levels(x) else NULL
-}
-
-levels.idx <- function(x){
-    x <- x[[idx_name(x, 2)]]
-    if (is.factor(x)) levels(x) else NULL
-}
-
-
 
 
