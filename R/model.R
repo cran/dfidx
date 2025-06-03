@@ -49,15 +49,25 @@ model.frame.dfidx <- function(formula, data = NULL, ...,
     else .pkg <- NULL
     .data <- unfold_idx(.data)
     .idx_vector <- attr(.data, "idx_vector")
-    .name <- attr(.data, "name")
+    .idx_name <- attr(.data, "idx_name")
     # use the Formula's model.frame method
     .data <- model.frame(.formula, .data, ...,
                          lhs = lhs, rhs = rhs, dot = dot)# %>% as_tibble
     .nterms <- attr(.data, "terms")
+
+    # compute the full set of the index names
+    .idx_full <- .idx_vector
+    if (! is.null(names(.idx_vector))){
+        .idx_full <- c(.idx_full, setdiff(names(.idx_vector), ""))
+    }
+
+    K <- length(setdiff(names(.data), .idx_full))
+    .idx_name[] <- K + 1
     # add the previously saved ids attribute
     attr(.data, "idx_vector") <- .idx_vector
-#    attr(.data, "name") <- .name
+    attr(.data, "idx_name") <- .idx_name
     attr(.data, "choice") <- .choice
+
     # "fold" the index in a data.frame column to get an dfidx object
     .data <- fold_idx(.data, pkg = .pkg)
 
@@ -98,9 +108,11 @@ model.frame.dfidx <- function(formula, data = NULL, ...,
         complete <- merge(complete, unique(.idx[.ids == 1]), all.x = TRUE)
         .data <- unfold_idx(.data)
         .idx_vector <- attr(.data, "idx_vector")
+        .idx_name <- attr(.data, "idx_name")
         .data <- merge(.data, complete, all.y = TRUE)
 #        .data <- .data[order(.data[[name_id1]], .data[[name_id2]]),]
         attr(.data, "idx_vector") <- .idx_vector
+        attr(.data, "idx_name") <- .idx_name
         .data <- fold_idx(.data, pkg = .pkg)
     }
     if (! is.null(reflevel)){
@@ -118,6 +130,15 @@ model.frame.dfidx <- function(formula, data = NULL, ...,
         spec_class <- setdiff(class(.data), c("dfidx", "tbl_df", "tbl", "data.frame"))
         class(.data) <- c(spec_class, "dfidx", "tbl_df", "tbl", "data.frame")
     }
+    # put the idx at the end so that the model.response function works properly
+    ## pos_idx <- as.integer(idx_name(.data))
+    ## K <- length(.data)
+    ## if (pos_idx == 1) .data <- .data[c(2:length(.data), 1)]
+    ## else{
+    ##     if (pos_idx != K){
+    ##         .data <- .data[c(1:(pos_idx - 1), (pos_idx + 1):K, pos_idx)]
+    ##     }
+    ## }    
     .data
 }
 

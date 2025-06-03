@@ -1,6 +1,6 @@
 Package: dfidx
-Version: 0.1-0
-Date: 2024-08-22
+Version: 0.1-1
+Date: 2025-06-03
 Title: Indexed Data Frames
 Authors@R: person("Yves", "Croissant", role = c("aut", "cre"), email = "yves.croissant@univ-reunion.fr")
 Depends: R (>= 3.5.0)
@@ -15,8 +15,8 @@ Encoding: UTF-8
 LazyData: true
 RdMacros: Rdpack
 NeedsCompilation: no
-Packaged: 2024-08-22 08:31:19 UTC; yves
+Packaged: 2025-06-03 12:33:47 UTC; yves
 Author: Yves Croissant [aut, cre]
 Maintainer: Yves Croissant <yves.croissant@univ-reunion.fr>
 Repository: CRAN
-Date/Publication: 2024-08-22 16:50:05 UTC
+Date/Publication: 2025-06-03 13:10:02 UTC

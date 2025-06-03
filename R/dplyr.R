@@ -60,6 +60,7 @@ dplyr::select
 
 #' @rdname dplyr
 #' @importFrom dplyr arrange
+#' @method arrange dfidx
 #' @export
 arrange.dfidx <- function(.data, ...){
     attrs <- attributes(.data)
@@ -71,6 +72,7 @@ arrange.dfidx <- function(.data, ...){
 
 #' @rdname dplyr
 #' @importFrom dplyr filter
+#' @method filter dfidx
 #' @export
 filter.dfidx <- function(.data, ...){
     attrs <- attributes(.data)
@@ -83,6 +85,7 @@ filter.dfidx <- function(.data, ...){
 
 #' @rdname dplyr
 #' @importFrom dplyr slice
+#' @method slice dfidx
 #' @export
 slice.dfidx <- function(.data, ...){
     attrs <- attributes(.data)
@@ -95,18 +98,22 @@ slice.dfidx <- function(.data, ...){
 
 #' @rdname dplyr
 #' @importFrom dplyr mutate
+#' @method mutate dfidx
 #' @export
 mutate.dfidx <- function(.data, ...){
     attrs <- attributes(.data)
-    .data <- as.data.frame(.data)
+#    .data <- as.data.frame(.data)
+    .data <- unfold_idx(.data)
     .data <- mutate(.data, ...)
-    attrs$names <- names(.data)
-    attributes(.data) <- attrs
+    .data <- fold_idx(.data)
+#    attrs$names <- names(.data)
+#    attributes(.data) <- attrs
     .data
 }
 
 #' @rdname dplyr
 #' @importFrom dplyr transmute
+#' @method transmute dfidx
 #' @export
 transmute.dfidx <- function(.data, ...){
     idxpos <- idx_name(.data)
@@ -122,6 +129,7 @@ transmute.dfidx <- function(.data, ...){
 
 #' @rdname dplyr
 #' @importFrom dplyr select
+#' @method select dfidx
 #' @export
 select.dfidx <- function(.data, ...){
     idxpos <- idx_name(.data)

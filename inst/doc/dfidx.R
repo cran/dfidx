@@ -65,6 +65,13 @@ mn
 mn %>% idx
 
 
+## ----position_name------------------------------------------------------------
+
+## -----------------------------------------------------------------------------
+dfidx(munnell, idx = c(region = "state", president = "year"),
+            name = "index", position = 4)
+
+
 ## -----------------------------------------------------------------------------
 #| label: munnell_wide
 munnell_wide
@@ -186,6 +193,7 @@ mutate(mn, lgsp = log(gsp), lgsp2 = lgsp ^ 2)
 transmute(mn, lgsp = log(gsp), lgsp2 = lgsp ^ 2)
 filter(mn, unemp > 10, gsp > 150000)
 slice(mn, 1:3)
+mutate(mn, gsp = ifelse(gsp < 170000, 0, gsp))
 
 
 ## -----------------------------------------------------------------------------
@@ -205,10 +213,4 @@ formula(mf_mn)
 #| label: model_matrix
 mf_mn %>% model.matrix(rhs = 1)
 mf_mn %>% model.matrix(rhs = 2:3) %>% print(n = 5)
-
-
-## -----------------------------------------------------------------------------
-mn <- dfidx(munnell, idx = c(region = "state", president = "year"),
-            name = "index", position = 4)
-mn
 
