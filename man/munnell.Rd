@@ -22,7 +22,7 @@ a tibble containing:
 \item unemp: state unemployment rate
 }
 
-An object of class \code{tbl_df} (inherits from \code{tbl}, \code{data.frame}) with 48 rows and 36 columns.
+An object of class \code{data.frame} with 48 rows and 36 columns.
 }
 \source{
 online complements to Baltagi (2001): \url{https://www.wiley.com/legacy/wileychi/baltagi/}

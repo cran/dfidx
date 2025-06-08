@@ -45,8 +45,11 @@ model.frame.dfidx <- function(formula, data = NULL, ...,
     # index series and a digit 1/2 indicating to which index they
     # refer to)
     .choice <- attr(.data, "choice")
-    if (class(.data)[1] != "dfidx") .pkg <- strsplit(class(.data)[1], "_")[[1]][2]
-    else .pkg <- NULL
+    if (! class(.data)[1] %in% c("dfidx", "tbl_dfidx")){
+        .pkg <- strsplit(class(.data)[1], "_")[[1]][2]
+    } else {
+        .pkg <- NULL
+    }
     .data <- unfold_idx(.data)
     .idx_vector <- attr(.data, "idx_vector")
     .idx_name <- attr(.data, "idx_name")
@@ -54,7 +57,6 @@ model.frame.dfidx <- function(formula, data = NULL, ...,
     .data <- model.frame(.formula, .data, ...,
                          lhs = lhs, rhs = rhs, dot = dot)# %>% as_tibble
     .nterms <- attr(.data, "terms")
-
     # compute the full set of the index names
     .idx_full <- .idx_vector
     if (! is.null(names(.idx_vector))){
@@ -127,8 +129,8 @@ model.frame.dfidx <- function(formula, data = NULL, ...,
     attr(.data, "formula") <- .oformula
     attr(.data, "alt.ordering") <- .levels
     if (.is_tibble){
-        spec_class <- setdiff(class(.data), c("dfidx", "tbl_df", "tbl", "data.frame"))
-        class(.data) <- c(spec_class, "dfidx", "tbl_df", "tbl", "data.frame")
+        spec_class <- setdiff(class(.data), c("dfidx_tbl", "dfidx", "tbl_df", "tbl", "data.frame"))
+        class(.data) <- c(spec_class, "tbl_dfidx", "dfidx", "tbl_df", "tbl", "data.frame")
     }
     # put the idx at the end so that the model.response function works properly
     ## pos_idx <- as.integer(idx_name(.data))
@@ -158,7 +160,7 @@ model.matrix.dfidx <- function(object, ..., lhs = NULL, rhs = 1, dot = "separate
 #' @param n the number of lines to print
 #' @export
 print.dfidx_matrix <- function(x, ..., n = 10L){
-    cat(glue("# [", nrow(x), " x ", ncol(x), "]"), "\n")
+    cat(paste("# [", nrow(x), " x ", ncol(x), "]\n", sep = ""))
     class(x) <- setdiff(class(x), "dfidx_matrix")
     print(x[1:n, ])
 }

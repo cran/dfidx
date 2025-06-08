@@ -14,78 +14,74 @@ library(dfidx)
 
 
 ## -----------------------------------------------------------------------------
-#| label: load_dplyr
-library(dplyr)
-
-
-## -----------------------------------------------------------------------------
 #| label: print.tibble
-munnell
+head(munnell, 3)
 
 
 ## -----------------------------------------------------------------------------
 #| label: print.dfidx
-munnell %>% dfidx
+dfidx(munnell) |> print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
 #| label: extract_idx
-munnell %>% dfidx %>% idx
+munnell |> dfidx() |> idx() |> print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
 #| label: dfidx_integer
-munnell %>% dfidx(48)
+munnell |> dfidx(48) |> print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
 #| label: dfidx_integer_pretty
-munnell %>% dfidx(48, idnames = c("state", "year"), levels = 1970:1986)
+munnell |> dfidx(48, idnames = c("state", "year"),
+                 levels = 1970:1986) |> print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
 #| label: dfidx_one_index
-munnell %>% dfidx("state", idnames = c(NA, "date"), levels = 1970:1986)
+munnell |> dfidx("state", idnames = c(NA, "date"),
+                 levels = 1970:1986) |> print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
 #| label: dfidx_two_indexes
-munnell %>% dfidx(c("state", "year"))
+munnell |> dfidx(c("state", "year")) |> print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
 #| label: one_or_two_nests
-mn <- munnell %>% dfidx(c(region = "state", "year"))
-mn <- munnell %>% dfidx(c(region = "state", president = "year"))
-mn
+mn <- munnell |> dfidx(c(region = "state", "year"))
+mn <- munnell |> dfidx(c(region = "state", president = "year"))
+mn |> print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
 #| label: idx_two_nests
-mn %>% idx
+idx(mn) |> print(n = 3)
 
 
 ## ----position_name------------------------------------------------------------
-
-## -----------------------------------------------------------------------------
 dfidx(munnell, idx = c(region = "state", president = "year"),
-            name = "index", position = 4)
+            name = "index", position = 4) |> print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
 #| label: munnell_wide
-munnell_wide
+head(munnell_wide, 3)
 
 
 ## -----------------------------------------------------------------------------
 #| label: varying
-munnell_wide %>% dfidx(varying = 3:36, sep = "_")
+munnell_wide |> dfidx(varying = 3:36, sep = "_") |> print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
 #| label: varying_pretty
-munnell_wide %>% dfidx(idx = c(region = "state"), varying = 3:36, 
-                       sep = "_", idnames = c(NA, "year"))
+munnell_wide |> dfidx(idx = c(region = "state"), varying = 3:36, 
+                      sep = "_", idnames = c(NA, "year")) |>
+    print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
@@ -119,9 +115,9 @@ identical(id_index1, id_index2)
 
 ## -----------------------------------------------------------------------------
 #| label: one_bracket
-mn[mn$unemp > 10, ]
-mn[mn$unemp > 10, c("highway", "utilities")]
-mn[mn$unemp > 10, "highway"]
+mn[mn$unemp > 10, ] |> print(n = 3)
+mn[mn$unemp > 10, c("highway", "utilities")] |> print(n = 3)
+mn[mn$unemp > 10, "highway"] |> print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
@@ -135,24 +131,24 @@ c(identical(mn1, mn2), identical(mn1, mn3))
 
 ## -----------------------------------------------------------------------------
 #| label: xseries
-mn1 %>% print(n = 3)
+mn1 |> print(n = 3)
 class(mn1)
-idx(mn1) %>% print(n = 3)
+idx(mn1) |> print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
 #| label: extract_index_1
-mn$idx$president %>% head
+head(mn$idx$president)
 
 
 ## -----------------------------------------------------------------------------
 #| label: extract_index_2
-idx(mn)$president %>% head
+idx(mn)$president |> head()
 
 
 ## -----------------------------------------------------------------------------
 #| label: extract_index_3
-mn$president %>% print(n = 3)
+mn$president |> print(n = 3)
 
 
 ## -----------------------------------------------------------------------------
@@ -180,37 +176,21 @@ lag.xseries_pnl <- function(x, ...){
     structure(x, class = class, idx = .idx)
 }
 lmn1 <- stats::lag(mn1)
-lmn1 %>% print(n = 3)
+lmn1 |> print(n = 3)
 class(lmn1)
 rbind(mn1, lmn1)[, 1:20]
 
 
 ## -----------------------------------------------------------------------------
-#| label: dplyr_verbs
-select(mn, highway, utilities)
-arrange(mn, desc(unemp))
-mutate(mn, lgsp = log(gsp), lgsp2 = lgsp ^ 2)
-transmute(mn, lgsp = log(gsp), lgsp2 = lgsp ^ 2)
-filter(mn, unemp > 10, gsp > 150000)
-slice(mn, 1:3)
-mutate(mn, gsp = ifelse(gsp < 170000, 0, gsp))
-
-
-## -----------------------------------------------------------------------------
-#| label: pull
-mn %>% pull(utilities)
-
-
-## -----------------------------------------------------------------------------
 #| label: model_frame
-mf_mn <- mn %>% model.frame(gsp ~ utilities + highway | unemp | labor,
+mf_mn <- mn |> model.frame(gsp ~ utilities + highway | unemp | labor,
                             subset = unemp > 10)
-mf_mn
+mf_mn |> print(n = 3)
 formula(mf_mn)
 
 
 ## -----------------------------------------------------------------------------
 #| label: model_matrix
-mf_mn %>% model.matrix(rhs = 1)
-mf_mn %>% model.matrix(rhs = 2:3) %>% print(n = 5)
+mf_mn |> model.matrix(rhs = 1) |> print(n = 5)
+mf_mn |> model.matrix(rhs = 2:3) |> print(n = 5)
 
