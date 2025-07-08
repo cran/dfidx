@@ -6,7 +6,7 @@
 \alias{munnell_wide}
 \title{Productivity in the United States}
 \format{
-a tibble containing:
+a data frame containing:
 \itemize{
 \item state: the state
 \item year: the year
@@ -22,10 +22,10 @@ a tibble containing:
 \item unemp: state unemployment rate
 }
 
-An object of class \code{data.frame} with 48 rows and 36 columns.
+An object of class \code{tbl_df} (inherits from \code{tbl}, \code{data.frame}) with 48 rows and 36 columns.
 }
 \source{
-online complements to Baltagi (2001): \url{https://www.wiley.com/legacy/wileychi/baltagi/}
+Online complements to Baltagi (2001): \url{https://www.wiley.com/legacy/wileychi/baltagi/}
 Online complements to Baltagi (2013): \url{https://bcs.wiley.com/he-bcs/Books?action=resource&bcsId=4338&itemId=1118672321&resourceId=13452}
 }
 \usage{
@@ -38,8 +38,11 @@ a panel data of 48 American States for 17 years, from 1970 to 1986
 }
 \references{
 \insertRef{BALT:01}{dfidx}
+
 \insertRef{BALT:13}{dfidx}
+
 \insertRef{BALT:PINN:95}{dfidx}
+
 \insertRef{MUNN:90}{dfidx}
 }
 \keyword{dataset}

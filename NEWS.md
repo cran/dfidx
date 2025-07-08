@@ -1,6 +1,30 @@
+# dfidx 0.1-3
+
+* `dfidx.print_n` is an option to choose the number of lines to print
+
+* `dfidx.pos_idx` is an option to choose the position of the `idx`
+  column
+
+* unit tests added
+
+* `transform`, `subset` methods and `organize` function (<=>
+  `dplyr::arrange`)
+
+* dfidx now have a sort (`TRUE` by default) and a drop.unused.levels
+  (`TRUE` by default) argument
+
+* `na.rm = TRUE` added in the `mean` method
+
+* the `print` method of `dfidx` is simplified
+
+* fix lg 250  if (is.tibble) data <- class(data) <- "data.frame" 
+
+* the print method for dfidx objects now includes directly the
+  printing of the index, without relying to the print.idx method
+
 # dfidx 0.1-2
 
-* **dfidx** is no free of tidyverse's dependencies which are now include
+* **dfidx** is now free of tidyverse's dependencies which are now include
   in the new **tidydfidx** package
 
 # dfidx 0.1-1

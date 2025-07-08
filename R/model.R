@@ -1,17 +1,18 @@
-#' model.frame/matrix for dfidx objects
+#' model.frame and model.matrix methods for dfidx objects
 #'
-#' Specific model.frame/matrix are provided for dfidx objects. This
-#' leads to an unusual order of arguments compared to the
-#' usage. Actually, the first two arguments of the model.frame method
-#' are a dfidx and a formula and the only main argument of the
-#' model.matrix is a dfidx which should be the result of a call to the
-#' model.frame method, i.e. it should have a term attribute.
+#' Specific `model.frame` and `model.matrix` are provided for `dfidx`
+#' objects. This leads to an unusual order of arguments compared to
+#' the usage. Actually, the first two arguments of the `model.frame`
+#' method are a `dfidx` and a `formula` and the only main argument of
+#' the `model.matrix` method is a `dfidx` which should be the result
+#' of a call to the `model.frame` method, i.e. it should have a
+#' `terms` attribute.
 #' @param formula a `dfidx`
 #' @param data a `formula`
 #' @param ...,lhs,rhs,dot see the `Formula` method
 #' @param alt.subset a subset of levels for the second index
 #' @param reflevel a user-defined first level for the second index
-#' @param balanced a boolean indicating if the resulting data.frame
+#' @param balanced a boolean indicating if the resulting `data.frame`
 #'     has to be balanced or not
 #' @param x a model matrix
 #' @param n the number of lines to be printed
@@ -115,7 +116,8 @@ model.frame.dfidx <- function(formula, data = NULL, ...,
 #        .data <- .data[order(.data[[name_id1]], .data[[name_id2]]),]
         attr(.data, "idx_vector") <- .idx_vector
         attr(.data, "idx_name") <- .idx_name
-        .data <- fold_idx(.data, pkg = .pkg)
+        # YC: 2025-07-08 sort = TRUE is added to fix the bug in WeightIt
+        .data <- fold_idx(.data, pkg = .pkg, sort = TRUE)
     }
     if (! is.null(reflevel)){
         .levels <- levels(idx(.data)[[idx_name(.data, 2)]])
@@ -159,7 +161,8 @@ model.matrix.dfidx <- function(object, ..., lhs = NULL, rhs = 1, dot = "separate
 #' @rdname model.frame.dfidx
 #' @param n the number of lines to print
 #' @export
-print.dfidx_matrix <- function(x, ..., n = 10L){
+print.dfidx_matrix <- function(x, ..., n = NULL){
+    if (is.null(n)) n <- options()$dfidx.print_n
     cat(paste("# [", nrow(x), " x ", ncol(x), "]\n", sep = ""))
     class(x) <- setdiff(class(x), "dfidx_matrix")
     print(x[1:n, ])
